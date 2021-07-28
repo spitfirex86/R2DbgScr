@@ -7,7 +7,6 @@ void fn_vAttachHooks( void )
 	DetourUpdateThread(GetCurrentThread());
 
 	DetourAttach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-	DetourAttach((PVOID *)&JFFTXT_vAffiche, (PVOID)MOD_JFFTXT_vAffiche);
 
 	DetourTransactionCommit();
 }
@@ -18,7 +17,6 @@ void fn_vDetachHooks( void )
 	DetourUpdateThread(GetCurrentThread());
 
 	DetourDetach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-	DetourDetach((PVOID *)&JFFTXT_vAffiche, (PVOID)MOD_JFFTXT_vAffiche);
 
 	DetourTransactionCommit();
 }
@@ -29,6 +27,7 @@ BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )
 	{
 	case DLL_PROCESS_ATTACH:
 		fn_vAttachHooks();
+		MOD_Main();
 		break;
 
 	case DLL_PROCESS_DETACH:

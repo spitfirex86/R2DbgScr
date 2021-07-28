@@ -160,12 +160,10 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="mod.h" />
     <ClInclude Include="script.h" />
-    <ClInclude Include="DBGTXT.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="mod.c" />
-    <ClCompile Include="DBGTXT.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

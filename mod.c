@@ -1,6 +1,6 @@
 #include "mod.h"
 #include "script.h"
-#include "DBGTXT.h"
+
 
 typedef enum tdeDebugMode
 {
@@ -81,18 +81,18 @@ char * MOD_fn_szGetActorName( HIE_tdstSuperObject *p_stActor )
 	return szName;
 }
 
-void MOD_vDrawFullDebug( void *pContext )
+void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 {
-	DBGTXT_vInit(pContext);
-	DBGTXT_vSetSize(g_lSize);
-	DBGTXT_vSetPos(g_lPosX, g_lPosY);
-	DBGTXT_g_bDrawFrame = TRUE;
+	pInfo->xSize = g_lSize;
+	pInfo->X = g_lPosX;
+	pInfo->Y = g_lPosY;
+	pInfo->bFrame = TRUE;
 
 	// Engine
-	DBGTXT_vPrintLine(TF_RED("ENGINE"));
-	DBGTXT_vPrintFmtLine("state=:" TF_YELLOW("%d"), GAM_fn_ucGetEngineMode());
-	DBGTXT_vPrintFmtLine("level=:" TF_YELLOW("%s"), GAM_fn_p_szGetLevelName());
-	DBGTXT_vPrintLine(NULL);
+	SPTXT_vPrintLine(TXT_Red("ENGINE"));
+	SPTXT_vPrintFmtLine("state=:" TXT_Yellow("%d"), GAM_fn_ucGetEngineMode());
+	SPTXT_vPrintFmtLine("level=:" TXT_Yellow("%s"), GAM_fn_p_szGetLevelName());
+	SPTXT_vPrintLine(NULL);
 
 	// Object stats
 	g_nOnScreen = 0;
@@ -100,35 +100,35 @@ void MOD_vDrawFullDebug( void *pContext )
 	int nInactive = XHIE_fn_lEnumSpoChildren(*XHIE_p_p_stInactiveDynamicWorld, MOD_bDummyCallback);
 	int nSectors = XHIE_fn_lEnumSpoChildren(*XHIE_p_p_stFatherSector, MOD_bDummyCallback);
 
-	DBGTXT_vPrintLine(TF_RED("OBJECT STATS"));
-	DBGTXT_vPrintFmtLine(
-		"active=:" TF_YELLOW("%d") "::inactive=:" TF_YELLOW("%d") "::sectors=:" TF_YELLOW("%d"),
+	SPTXT_vPrintLine(TXT_Red("OBJECT STATS"));
+	SPTXT_vPrintFmtLine(
+		"active=:" TXT_Yellow("%d") "::inactive=:" TXT_Yellow("%d") "::sectors=:" TXT_Yellow("%d"),
 		nActive, nInactive, nSectors
 	);
-	DBGTXT_vPrintFmtLine("on screen=:" TF_YELLOW("%d"), g_nOnScreen);
-	DBGTXT_vPrintLine(NULL);
+	SPTXT_vPrintFmtLine("on screen=:" TXT_Yellow("%d"), g_nOnScreen);
+	SPTXT_vPrintLine(NULL);
 
 	// Main actor
 	HIE_tdstSuperObject *pMainActor = XHIE_fn_p_stGetMainActor();
 	char *szActorName = MOD_fn_szGetActorName(pMainActor);
 
-	DBGTXT_vPrintLine(TF_RED("MAIN ACTOR"));
-	DBGTXT_vPrintFmtLine("object=:" TF_YELLOW("%s") " = %p", szActorName, pMainActor);
+	SPTXT_vPrintLine(TXT_Red("MAIN ACTOR"));
+	SPTXT_vPrintFmtLine("object=:" TXT_Yellow("%s") " = %p", szActorName, pMainActor);
 
 	if ( pMainActor )
 	{
 		// Hitpoints
 		HIE_tdstStandardGame *pStdGame = pMainActor->stEngineObject.p_stPerso->p_stStdGame;
-		DBGTXT_vPrintFmtLine("hp=:" TF_YELLOW("%d ; %d"), pStdGame->ucHitPoints, pStdGame->ucHitPointsMax);
-		DBGTXT_vPrintLine(NULL);
+		SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pStdGame->ucHitPoints, pStdGame->ucHitPointsMax);
+		SPTXT_vPrintLine(NULL);
 
 		// Coordinates
 		MTH3D_tdstVector *pCoordinates = &pMainActor->p_stGlobalMatrix->stPos;
-		DBGTXT_vPrintFmtLine(
-			"X=:" TF_YELLOW("%.3f") "::Y=:" TF_YELLOW("%.3f") "::Z=:" TF_YELLOW("%.3f"),
+		SPTXT_vPrintFmtLine(
+			"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 			pCoordinates->x, pCoordinates->y, pCoordinates->z
 		);
-		DBGTXT_vPrintLine(NULL);
+		SPTXT_vPrintLine(NULL);
 
 		// Speed
 		DNM_tdstDynam *pDynam = pMainActor->stEngineObject.p_stPerso->p_stDynam;
@@ -139,15 +139,15 @@ void MOD_vDrawFullDebug( void *pContext )
 			float xSpeedXY = sqrtf(sumSqXY);
 			float xSpeedNorm = sqrtf(sumSqXY + (stSpeed.z * stSpeed.z));
 
-			DBGTXT_vPrintLine(TF_RED("VELOCITY"));
-			DBGTXT_vPrintFmtLine("XY::speed=:" TF_YELLOW("%.3f"), xSpeedXY);
-			DBGTXT_vPrintFmtLine("XYZ:speed=:" TF_YELLOW("%.3f"), xSpeedNorm);
-			DBGTXT_vPrintLine(NULL);
-			DBGTXT_vPrintFmtLine(
-				"X=:" TF_YELLOW("%.3f") "::Y=:" TF_YELLOW("%.3f") "::Z=:" TF_YELLOW("%.3f"),
+			SPTXT_vPrintLine(TXT_Red("VELOCITY"));
+			SPTXT_vPrintFmtLine("XY::speed=:" TXT_Yellow("%.3f"), xSpeedXY);
+			SPTXT_vPrintFmtLine("XYZ:speed=:" TXT_Yellow("%.3f"), xSpeedNorm);
+			SPTXT_vPrintLine(NULL);
+			SPTXT_vPrintFmtLine(
+				"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 				stSpeed.x, stSpeed.y, stSpeed.z
 			);
-			DBGTXT_vPrintLine(NULL);
+			SPTXT_vPrintLine(NULL);
 		}
 
 		// Targeting
@@ -163,43 +163,43 @@ void MOD_vDrawFullDebug( void *pContext )
 		HIE_tdstSuperObject *pTargetSpo = pTargetPerso ? pTargetPerso->p_stStdGame->p_stSuperObject : NULL;
 		char *szTargetName = MOD_fn_szGetPersoName(pTargetPerso);
 
-		DBGTXT_vPrintLine(TF_RED("TARGETING"));
-		DBGTXT_vPrintFmtLine("object=:" TF_YELLOW("%s") " = %p", szTargetName, pTargetSpo);
+		SPTXT_vPrintLine(TXT_Red("TARGETING"));
+		SPTXT_vPrintFmtLine("object=:" TXT_Yellow("%s") " = %p", szTargetName, pTargetSpo);
 
 		if ( pTargetPerso )
 		{
 			HIE_tdstStandardGame *pTargetStd = pTargetPerso->p_stStdGame;
-			DBGTXT_vPrintFmtLine("hp=:" TF_YELLOW("%d ; %d"), pTargetStd->ucHitPoints, pTargetStd->ucHitPointsMax);
-			DBGTXT_vPrintLine(NULL);
+			SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pTargetStd->ucHitPoints, pTargetStd->ucHitPointsMax);
+			SPTXT_vPrintLine(NULL);
 
 			MTH3D_tdstVector *pTargetCoords = &pTargetSpo->p_stGlobalMatrix->stPos;
-			DBGTXT_vPrintFmtLine(
-				"X=:" TF_YELLOW("%.3f") "::Y=:" TF_YELLOW("%.3f") "::Z=:" TF_YELLOW("%.3f"),
+			SPTXT_vPrintFmtLine(
+				"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 				pTargetCoords->x, pTargetCoords->y, pTargetCoords->z
 			);
-			DBGTXT_vPrintLine(NULL);
+			SPTXT_vPrintLine(NULL);
 
 			char *szTargetOnScreen = pTargetStd->ucMiscFlags & (1 << 5) ? "yes" : "no";
-			DBGTXT_vPrintFmtLine("on screen=:" TF_YELLOW("%s"), szTargetOnScreen);
-			DBGTXT_vPrintLine(NULL);
+			SPTXT_vPrintFmtLine("on screen=:" TXT_Yellow("%s"), szTargetOnScreen);
+			SPTXT_vPrintLine(NULL);
 		}
 	}
 }
 
-void MOD_vDrawMinimalDebug( void *pContext )
+void MOD_vDrawMinimalDebug( SPTXT_tdstTextInfo *pInfo )
 {
-	DBGTXT_vInit(pContext);
-	DBGTXT_vSetSize(g_lSize);
-	DBGTXT_vSetPos(g_lPosX, g_lPosY);
-	DBGTXT_g_bDrawFrame = TRUE;
+	pInfo->xSize = g_lSize;
+	pInfo->X = g_lPosX;
+	pInfo->Y = g_lPosY;
+	pInfo->bFrame = TRUE;
 
 	HIE_tdstSuperObject *pMainActor = XHIE_fn_p_stGetMainActor();
 
 	if( pMainActor )
 	{
 		MTH3D_tdstVector *pCoordinates = &pMainActor->p_stGlobalMatrix->stPos;
-		DBGTXT_vPrintFmtLine(
-			TF_RED("pos:") "X=:" TF_YELLOW("%.3f") "::Y=:" TF_YELLOW("%.3f") "::Z=:" TF_YELLOW("%.3f"),
+		SPTXT_vPrintFmtLine(
+			TXT_Red("pos:") "X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 			pCoordinates->x, pCoordinates->y, pCoordinates->z
 		);
 
@@ -211,25 +211,44 @@ void MOD_vDrawMinimalDebug( void *pContext )
 			float xSpeedXY = sqrtf(sumSqXY);
 			float xSpeedNorm = sqrtf(sumSqXY + (stSpeed.z * stSpeed.z));
 
-			DBGTXT_vPrintFmtLine(
-				TF_RED("vel:") "XY=:" TF_YELLOW("%.3f") "::XYZ=:" TF_YELLOW("%.3f"),
+			SPTXT_vPrintFmtLine(
+				TXT_Red("vel:") "XY=:" TXT_Yellow("%.3f") "::XYZ=:" TXT_Yellow("%.3f"),
 				xSpeedXY, xSpeedNorm
 			);
-			DBGTXT_vPrintFmtLine(
-				TF_RED("vel:") "X=:" TF_YELLOW("%.3f") "::Y=:" TF_YELLOW("%.3f") "::Z=:" TF_YELLOW("%.3f"),
+			SPTXT_vPrintFmtLine(
+				TXT_Red("vel:") "X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 				stSpeed.x, stSpeed.y, stSpeed.z
 			);
 		}
 	}
 }
 
-void MOD_vDrawPrompt( void *pContext )
+void MOD_vDrawPrompt( SPTXT_tdstTextInfo *pInfo )
 {
-	DBGTXT_vInit(pContext);
-	DBGTXT_vSetSize(g_lSize);
-	DBGTXT_vSetPos(1000-5, g_lPosY);
-	DBGTXT_g_bRightAlign = TRUE;
-	DBGTXT_vPrintLine("F3 - " TF_YELLOW("toggle info"));
+	pInfo->xSize = g_lSize;
+	pInfo->X = 1000-5;
+	pInfo-> Y = g_lPosY;
+	pInfo->bRightAlign = TRUE;
+	SPTXT_vPrintLine("F3 - " TXT_Yellow("toggle info"));
+}
+
+void CALLBACK MOD_vTextCallback( SPTXT_tdstTextInfo *p_stInfo )
+{
+	MOD_vDrawPrompt(p_stInfo);
+	SPTXT_vResetTextInfo(p_stInfo);
+
+	switch( g_eDebugMode )
+	{
+	case e_DM_Full:
+		MOD_vDrawFullDebug(p_stInfo);
+		break;
+
+	case e_DM_Minimal:
+		MOD_vDrawMinimalDebug(p_stInfo);
+		break;
+		
+	default: break;
+	}
 }
 
 LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
@@ -246,20 +265,8 @@ LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 	return R2_WndProc(hWnd, uMsg, wParam, lParam);
 }
 
-void MOD_JFFTXT_vAffiche( void *pContext )
+void MOD_Main( void )
 {
-	MOD_vDrawPrompt(pContext);
-
-	switch( g_eDebugMode )
-	{
-	case e_DM_Full:
-		MOD_vDrawFullDebug(pContext);
-		break;
-
-	case e_DM_Minimal:
-		MOD_vDrawMinimalDebug(pContext);
-		break;
-	}
-
-	JFFTXT_vAffiche(pContext);
+	SPTXT_vInit();
+	SPTXT_vAddTextCallback(MOD_vTextCallback);
 }
