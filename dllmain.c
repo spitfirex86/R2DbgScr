@@ -1,8 +1,13 @@
 #include "framework.h"
 #include "mod.h"
 
+WNDPROC R2_WndProc = NULL;
+
+
 void fn_vAttachHooks( void )
 {
+	R2_WndProc = GAM_fn_WndProc;
+
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 

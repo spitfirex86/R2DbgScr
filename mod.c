@@ -11,9 +11,6 @@ typedef enum tdeDebugMode
 } tdeDebugMode;
 
 
-WNDPROC R2_WndProc = OFFSET(0x4022D0);
-HWND *R2_hWnd = OFFSET(0x49F080);
-
 int g_nOnScreen = 0;
 tdeDebugMode g_eDebugMode = e_DM_None;
 
@@ -253,7 +250,7 @@ void CALLBACK MOD_vTextCallback( SPTXT_tdstTextInfo *p_stInfo )
 
 LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
-	if ( uMsg == WM_KEYDOWN )
+	if ( uMsg == WM_KEYDOWN && IPT_g_stInputStructure->ulNumberOfEntryElement )
 	{
 		if ( wParam == VK_F3 )
 		{
