@@ -1,29 +1,15 @@
 #include "framework.h"
 #include "mod.h"
 
-WNDPROC R2_WndProc = NULL;
-
 
 void fn_vAttachHooks( void )
 {
-	R2_WndProc = GAM_fn_WndProc;
-
-	DetourTransactionBegin();
-	DetourUpdateThread(GetCurrentThread());
-
-	DetourAttach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-
-	DetourTransactionCommit();
+	FHK_M_lCreateHook(&GAM_fn_WndProc, MOD_WndProc);
 }
 
 void fn_vDetachHooks( void )
 {
-	DetourTransactionBegin();
-	DetourUpdateThread(GetCurrentThread());
-
-	DetourDetach((PVOID *)&R2_WndProc, (PVOID)MOD_WndProc);
-
-	DetourTransactionCommit();
+	FHK_M_lDestroyHook(&GAM_fn_WndProc, MOD_WndProc);
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )

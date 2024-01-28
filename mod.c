@@ -1,17 +1,18 @@
 #include "mod.h"
 #include "script.h"
+#include "comport.h"
 
 
 typedef enum tdeDebugMode
 {
 	e_DM_None,
 	e_DM_Full,
+	e_DM_FullAI,
 	e_DM_Minimal,
 	e_Nb_DM
 } tdeDebugMode;
 
 
-int g_nOnScreen = 0;
 tdeDebugMode g_eDebugMode = e_DM_None;
 
 int g_lSize = 6;
@@ -19,64 +20,90 @@ int g_lPosX = 10;
 int g_lPosY = 10;
 
 
+char const g_szNobody[] = "nobody";
+char const g_szUnnamed[] = "unnamed object";
+char const g_szNone[] = "none";
+
+
 void MOD_vRunScript( HIE_tdstSuperObject *p_stSpo, AI_tdstNodeInterpret *p_stNode, AI_tdstGetSetParam *p_stParam )
 {
-	while ( p_stNode->ucDepth > 0 )
-	{
+	while ( p_stNode->eType != AI_E_ti_EndTree )
 		p_stNode = AI_fn_p_stEvalTree(p_stSpo, p_stNode, p_stParam);
-	}
 }
 
-BOOL CALLBACK MOD_bCountOnScreenCallback( HIE_tdstSuperObject *p_stSpo )
+int MOD_fn_lCountOnScreenObjects( HIE_tdstSuperObject *p_stWorld )
 {
-	HIE_tdstEngineObject *p_stPerso = p_stSpo->hLinkedObject.p_stCharacter;
-	if ( p_stSpo->ulType == HIE_C_Type_Actor && p_stPerso )
+	int lOnScreen = 0;
+	HIE_tdstSuperObject *p_stSpo;
+
+	LST_M_DynamicForEach(p_stWorld, p_stSpo)
 	{
-		if ( p_stPerso->hStandardGame->ucMiscFlags & (1 << 5) )
-		{
-			g_nOnScreen++;
-		}
+		if ( HIE_M_bSuperObjectIsActor(p_stSpo)
+			&& (HIE_M_hSuperObjectGetStdGame(p_stSpo)->ucMiscFlags & Std_C_MiscFlag_UselessCulling) )
+			++lOnScreen;
 	}
 
-	return TRUE;
+	return lOnScreen;
 }
 
-BOOL CALLBACK MOD_bDummyCallback( HIE_tdstSuperObject *p_stSpo )
+char const * MOD_fn_szGetSuperObjName( HIE_tdstSuperObject *p_stActor )
 {
-	return TRUE;
-}
-
-char * MOD_fn_szGetActorName( HIE_tdstEngineObject *p_stPerso )
-{
-	char *szName = "nothing";
-
-	if ( p_stPerso )
-	{
-		szName = XHIE_fn_szGetSuperObjectPersonalName(p_stPerso->hStandardGame->p_stSuperObject);
-		if ( !szName )
-		{
-			szName = "unnamed object";
-		}
-	}
-
-	return szName;
-}
-
-char * MOD_fn_szGetSuperObjName( HIE_tdstSuperObject *p_stActor )
-{
-	char *szName = "nobody";
-
 	if ( p_stActor )
 	{
-		szName = XHIE_fn_szGetSuperObjectPersonalName(p_stActor);
-		if( !szName )
-		{
-			szName = "unnamed object";
-		}
+		char *szName = HIE_fn_szGetObjectPersonalName(p_stActor);
+		return (szName) ? szName : g_szUnnamed;
 	}
 
-	return szName;
+	return g_szNobody;
 }
+
+char const * MOD_fn_szGetActorName( HIE_tdstEngineObject *p_stPerso )
+{
+	return (p_stPerso)
+		? MOD_fn_szGetSuperObjName(HIE_M_hActorGetSuperObject(p_stPerso))
+		: g_szNobody;
+}
+
+int MOD_fn_lGetCurrentComportIdx( AI_tdstIntelligence *p_stIntel )
+{
+	if ( !p_stIntel )
+		return -1;
+
+	AI_tdstScriptAI *p_stScriptAI = *p_stIntel->pp_stScriptAI;
+	AI_tdstComport *p_stComport = p_stIntel->p_stCurrentComport;
+
+	for ( int i = 0; i < p_stScriptAI->ulNbComport; ++i )
+	{
+		if ( &p_stScriptAI->a_stComport[i] == p_stComport )
+			return i;
+	}
+
+	return -1;
+}
+
+void MOD_fn_vPrintComportInfo( SPTXT_tdstTextInfo *pInfo, HIE_tdstEngineObject *p_stActor )
+{
+	AI_tdstMind *pMind = AI_M_hGetMindOfActor(p_stActor);
+
+	int lIdxComport = MOD_fn_lGetCurrentComportIdx(pMind->p_stIntelligence);
+	int lIdxReflex = MOD_fn_lGetCurrentComportIdx(pMind->p_stReflex);
+
+	tdstNameTable *pTable = fn_p_stGetNameTableForActor(p_stActor);
+	char const *szComportName = (lIdxComport != -1) ? fn_szGetComportNameInTable(pTable, lIdxComport) : g_szNone;
+	char const *szReflexName = (lIdxReflex != -1) ? fn_szGetReflexNameInTable(pTable, lIdxReflex) : g_szNone;
+
+	//SPTXT_vPrintLine(TXT_Red("AI"));
+	(szComportName)
+		? SPTXT_vPrintFmtLine("comport=:" TXT_Yellow("%s"), szComportName)
+		: SPTXT_vPrintFmtLine("comport=:" TXT_Yellow("%d"), lIdxComport);
+
+	(szReflexName)
+		? SPTXT_vPrintFmtLine("reflex=:" TXT_Yellow("%s"), szReflexName)
+		: SPTXT_vPrintFmtLine("reflex=:" TXT_Yellow("%d"), lIdxReflex);
+
+	SPTXT_vNewLine();
+}
+
 
 void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 {
@@ -89,46 +116,54 @@ void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 	SPTXT_vPrintLine(TXT_Red("ENGINE"));
 	SPTXT_vPrintFmtLine("state=:" TXT_Yellow("%d"), GAM_fn_ucGetEngineMode());
 	SPTXT_vPrintFmtLine("level=:" TXT_Yellow("%s"), GAM_fn_p_szGetLevelName());
-	SPTXT_vPrintLine(NULL);
+	SPTXT_vNewLine();
 
 	// Object stats
-	g_nOnScreen = 0;
-	int nActive = XHIE_fn_lEnumSpoChildren(*GAM_pp_stDynamicWorld, MOD_bCountOnScreenCallback);
-	int nInactive = XHIE_fn_lEnumSpoChildren(*GAM_pp_stInactiveDynamicWorld, MOD_bDummyCallback);
-	int nSectors = XHIE_fn_lEnumSpoChildren(*GAM_pp_stFatherSector, MOD_bDummyCallback);
+	int nActive = LST_M_DynamicGetNbOfElements(*GAM_g_p_stDynamicWorld);
+	int nInactive = LST_M_DynamicGetNbOfElements(*GAM_g_p_stInactiveDynamicWorld);
+	int nSectors = LST_M_DynamicGetNbOfElements(*GAM_g_p_stFatherSector);
+	int nOnScreen = MOD_fn_lCountOnScreenObjects(*GAM_g_p_stDynamicWorld);
 
 	SPTXT_vPrintLine(TXT_Red("OBJECT STATS"));
 	SPTXT_vPrintFmtLine(
 		"active=:" TXT_Yellow("%d") "::inactive=:" TXT_Yellow("%d") "::sectors=:" TXT_Yellow("%d"),
 		nActive, nInactive, nSectors
 	);
-	SPTXT_vPrintFmtLine("on screen=:" TXT_Yellow("%d"), g_nOnScreen);
-	SPTXT_vPrintLine(NULL);
+	SPTXT_vPrintFmtLine("on screen=:" TXT_Yellow("%d"), nOnScreen);
+	SPTXT_vNewLine();
 
 	// Main actor
-	HIE_tdstSuperObject *pMainActor = XHIE_fn_p_stGetMainActor();
-	char *szActorName = MOD_fn_szGetSuperObjName(pMainActor);
+	HIE_tdstSuperObject *pMain = HIE_M_hGetMainActor();
+	char const *szActorName = MOD_fn_szGetSuperObjName(pMain);
 
 	SPTXT_vPrintLine(TXT_Red("MAIN ACTOR"));
-	SPTXT_vPrintFmtLine("object=:" TXT_Yellow("%s") " = %p", szActorName, pMainActor);
+	SPTXT_vPrintFmtLine("object=:" TXT_Yellow("%s") " = %p", szActorName, pMain);
 
-	if ( pMainActor )
+	if ( pMain )
 	{
+		HIE_tdstEngineObject *pMainAct = HIE_M_hSuperObjectGetActor(pMain);
+
 		// Hitpoints
-		HIE_tdstStandardGame *pStdGame = pMainActor->hLinkedObject.p_stCharacter->hStandardGame;
+		HIE_tdstStandardGame *pStdGame = pMainAct->hStandardGame;
 		SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pStdGame->ucHitPoints, pStdGame->ucHitPointsMax);
-		SPTXT_vPrintLine(NULL);
+		SPTXT_vNewLine();
+
+		if ( g_eDebugMode == e_DM_FullAI )
+		{
+			// Comport
+			MOD_fn_vPrintComportInfo(pInfo, pMainAct);
+		}
 
 		// Coordinates
-		MTH3D_tdstVector *pCoordinates = &pMainActor->p_stGlobalMatrix->stPos;
+		MTH3D_tdstVector *pCoords = &pMain->p_stGlobalMatrix->stPos;
 		SPTXT_vPrintFmtLine(
 			"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
-			pCoordinates->x, pCoordinates->y, pCoordinates->z
+			pCoords->x, pCoords->y, pCoords->z
 		);
-		SPTXT_vPrintLine(NULL);
+		SPTXT_vNewLine();
 
 		// Speed
-		DNM_tdstDynam *pDynam = pMainActor->hLinkedObject.p_stCharacter->hDynam;
+		DNM_tdstDynam *pDynam = pMainAct->hDynam;
 		if ( pDynam )
 		{
 			MTH3D_tdstVector stSpeed = pDynam->p_stDynamics->stDynamicsBase.p_stReport->stAbsoluteCurrSpeed.stLinear;
@@ -139,26 +174,26 @@ void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 			SPTXT_vPrintLine(TXT_Red("VELOCITY"));
 			SPTXT_vPrintFmtLine("XY::speed=:" TXT_Yellow("%.3f"), xSpeedXY);
 			SPTXT_vPrintFmtLine("XYZ:speed=:" TXT_Yellow("%.3f"), xSpeedNorm);
-			SPTXT_vPrintLine(NULL);
+			SPTXT_vNewLine();
 			SPTXT_vPrintFmtLine(
 				"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 				stSpeed.x, stSpeed.y, stSpeed.z
 			);
-			SPTXT_vPrintLine(NULL);
+			SPTXT_vNewLine();
 		}
 
 		// Targeting
-		SCRIPT(GetTargetPerso)
+		SC_Script(Scr_GetTargetPerso)
 		{
-			FUNC(SF_CibleLaPlusProcheavecAngles)(INT(32), INT(20), INT(2), INT(1), _FUNC(SF_GetPersoSighting), REAL(35.0f), REAL(35.0f)),
-			END()
+			ACT_CibleLaPlusProcheAvecAngles(32, 20, 2, 1, ACT_GetPersoSighting(), 35.0f, 35.0f),
+			SC_EndScript()
 		};
 		AI_tdstGetSetParam stParam = { 0 };
-		MOD_vRunScript(pMainActor, GetTargetPerso, &stParam);
-		HIE_tdstEngineObject *pTargetPerso = stParam.pValue;
+		MOD_vRunScript(pMain, Scr_GetTargetPerso, &stParam);
+		HIE_tdstEngineObject *pTargetPerso = stParam.uParam.hActor;
 
 		HIE_tdstSuperObject *pTargetSpo = pTargetPerso ? pTargetPerso->hStandardGame->p_stSuperObject : NULL;
-		char *szTargetName = MOD_fn_szGetActorName(pTargetPerso);
+		char const *szTargetName = MOD_fn_szGetActorName(pTargetPerso);
 
 		SPTXT_vPrintLine(TXT_Red("TARGETING"));
 		SPTXT_vPrintFmtLine("object=:" TXT_Yellow("%s") " = %p", szTargetName, pTargetSpo);
@@ -167,19 +202,25 @@ void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 		{
 			HIE_tdstStandardGame *pTargetStd = pTargetPerso->hStandardGame;
 			SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pTargetStd->ucHitPoints, pTargetStd->ucHitPointsMax);
-			SPTXT_vPrintLine(NULL);
+			SPTXT_vNewLine();
+
+			if ( g_eDebugMode == e_DM_FullAI )
+			{
+				// Comport
+				MOD_fn_vPrintComportInfo(pInfo, pTargetPerso);
+			}
 
 			MTH3D_tdstVector *pTargetCoords = &pTargetSpo->p_stGlobalMatrix->stPos;
 			SPTXT_vPrintFmtLine(
 				"X=:" TXT_Yellow("%.3f") "::Y=:" TXT_Yellow("%.3f") "::Z=:" TXT_Yellow("%.3f"),
 				pTargetCoords->x, pTargetCoords->y, pTargetCoords->z
 			);
-			SPTXT_vPrintLine(NULL);
+			SPTXT_vNewLine();
 
 			char *szTargetOnScreen = pTargetStd->ucMiscFlags & (1 << 5) ? "yes" : "no";
 			SPTXT_vPrintFmtLine("on screen=:" TXT_Yellow("%s"), szTargetOnScreen);
-			SPTXT_vPrintLine(NULL);
 		}
+		SPTXT_vNewLine();
 	}
 }
 
@@ -190,7 +231,7 @@ void MOD_vDrawMinimalDebug( SPTXT_tdstTextInfo *pInfo )
 	pInfo->Y = g_lPosY;
 	pInfo->bFrame = TRUE;
 
-	HIE_tdstSuperObject *pMainActor = XHIE_fn_p_stGetMainActor();
+	HIE_tdstSuperObject *pMainActor = HIE_M_hGetMainActor();
 
 	if( pMainActor )
 	{
@@ -237,6 +278,7 @@ void CALLBACK MOD_vTextCallback( SPTXT_tdstTextInfo *p_stInfo )
 	switch( g_eDebugMode )
 	{
 	case e_DM_Full:
+	case e_DM_FullAI:
 		MOD_vDrawFullDebug(p_stInfo);
 		break;
 
@@ -259,11 +301,12 @@ LRESULT CALLBACK MOD_WndProc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
 		}
 	}
 
-	return R2_WndProc(hWnd, uMsg, wParam, lParam);
+	return GAM_fn_WndProc(hWnd, uMsg, wParam, lParam);
 }
 
 void MOD_Main( void )
 {
+	fn_vReadComportNames();
 	SPTXT_vInit();
 	SPTXT_vAddTextCallback(MOD_vTextCallback);
 }
