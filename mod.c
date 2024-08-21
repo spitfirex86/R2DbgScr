@@ -144,7 +144,7 @@ void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 		HIE_tdstEngineObject *pMainAct = HIE_M_hSuperObjectGetActor(pMain);
 
 		// Hitpoints
-		HIE_tdstStandardGame *pStdGame = pMainAct->hStandardGame;
+		GAM_tdstStandardGame *pStdGame = pMainAct->hStandardGame;
 		SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pStdGame->ucHitPoints, pStdGame->ucHitPointsMax);
 		SPTXT_vNewLine();
 
@@ -200,7 +200,7 @@ void MOD_vDrawFullDebug( SPTXT_tdstTextInfo *pInfo )
 
 		if ( pTargetPerso )
 		{
-			HIE_tdstStandardGame *pTargetStd = pTargetPerso->hStandardGame;
+			GAM_tdstStandardGame *pTargetStd = pTargetPerso->hStandardGame;
 			SPTXT_vPrintFmtLine("hp=:" TXT_Yellow("%d ; %d"), pTargetStd->ucHitPoints, pTargetStd->ucHitPointsMax);
 			SPTXT_vNewLine();
 

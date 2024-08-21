@@ -12,18 +12,19 @@ void fn_vDetachHooks( void )
 	FHK_M_lDestroyHook(&GAM_fn_WndProc, MOD_WndProc);
 }
 
-BOOL APIENTRY DllMain( HMODULE hModule, DWORD dwReason, LPVOID lpReserved )
+
+__declspec(dllexport)
+int ModMain( BOOL bInit )
 {
-	switch ( dwReason )
+	if ( bInit )
 	{
-	case DLL_PROCESS_ATTACH:
 		fn_vAttachHooks();
 		MOD_Main();
-		break;
-
-	case DLL_PROCESS_DETACH:
-		fn_vDetachHooks();
-		break;
 	}
-	return TRUE;
+	else
+	{
+		fn_vDetachHooks();
+	}
+
+	return 0;
 }
